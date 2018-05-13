@@ -48,7 +48,7 @@ def blstm_cnn_wd_ft_ner(max_len_sent, max_len_word, num_tags, word_embedding_dim
     ##### main BLSTM network #####
     X = concatenate([X_char, word_embedding, word_feature_embedding])
     
-    X = Bidirectional(LSTM(units = max_len_sent, recurrent_dropout = 0.68, return_sequences = True, name = 'main_layer_1'))(X)
+    X = Bidirectional(LSTM(units = max_len_sent, dropout = 0.68, return_sequences = True, name = 'main_layer_1'))(X)
     X = TimeDistributed(Dense(num_tags, activation = 'softmax'))(X)
     
     model = Model(inputs = [word_input, word_feature_input, char_input], outputs = X)

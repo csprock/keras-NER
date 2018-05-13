@@ -2,11 +2,10 @@ import numpy as np
 from keras.preprocessing.sequence import pad_sequences
 from keras.utils import to_categorical
 
-
 ##################################################
 #########  index dictionary makers ###############
 ##################################################
-def create_character_dictionary(vocab_list, custom = False):
+def _create_character_dictionary(vocab_list, custom = False):
     '''
     Accepts a list of words and creates lookup dictionary containing each character found in 
     the set of words. Adds two additional tokens for 'UNK' and 'PAD'
@@ -29,7 +28,7 @@ def create_character_dictionary(vocab_list, custom = False):
 
         
 
-def create_word_dictionary(vocab_list):
+def _create_word_dictionary(vocab_list):
     '''
     Accepts a list of words and creates a lookup dictionary containing each word found in vocab_list. 
     Assumes the words in vocab_list are unique. Adds additional tokens for 'UNK' and 'PAD'
@@ -40,7 +39,7 @@ def create_word_dictionary(vocab_list):
 
 
 
-def create_tag_dictionary(tag_list, zero_tag = None):
+def _create_tag_dictionary(tag_list, zero_tag = None):
     '''
     Accepts a list of tags and returns a lookup dictionary containing each tag. Optional
     zero_tag to specify which tag to assign an index of 0.
@@ -61,9 +60,9 @@ def create_tag_dictionary(tag_list, zero_tag = None):
 ########## word and char features  #############
 ################################################
     
-def word_features(word):
+def _word_features(word):
     '''
-    Accepts a string. Return feature indicator for input word. 
+    Accepts a string. Return feature index/indicator for input word. 
     
     Features:
         - all lowercase
@@ -86,9 +85,9 @@ def word_features(word):
         return 5
     
 
-def char_features(char, punctuation_list = '\'!"#$%&()*+,-./:;<=>?@[\]^_`{|}~'):
+def _char_features(char, punctuation_list = '\'!"#$%&()*+,-./:;<=>?@[\]^_`{|}~'):
     '''
-    Accepts a str of length 1.
+    Accepts a str of length 1. Returns feature index/indicator for input character.
     
     Features:
         - uppercase
@@ -107,11 +106,13 @@ def char_features(char, punctuation_list = '\'!"#$%&()*+,-./:;<=>?@[\]^_`{|}~'):
         return 4
 
 
-####### sequence converters ###########
-
-def sent2seq(sent, word_dictionary):
+##################################################
+#########  convert sequences       ###############
+##################################################
+        
+def _sent2seq(sent, word_dictionary):
     '''
-    input sentence as list of words and a word index dictionary
+    Converts sentence into a sequence of indices using a word_dictionary.
     '''
     sent_seq = [None]*len(sent)
     for i, w in enumerate(sent):
@@ -125,10 +126,9 @@ def sent2seq(sent, word_dictionary):
 
 
 
-def word2seq(word, char_dictionary):
+def _word2seq(word, char_dictionary):
     '''
-    convert word to sequence of integers given word and character index dictionary
-    assumes words have been stripped of bordering whitespace
+    Convert word into sequence of indices using char_dictionary.
     '''
     char_seq = [None]*len(word)
     for i, c in enumerate(word):
@@ -140,42 +140,43 @@ def word2seq(word, char_dictionary):
     
     return char_seq
 
-def tags2seq(tags, tag_dictionary):
+def _tags2seq(tags, tag_dictionary):
     return [tag_dictionary[t] for t in tags]
 
 
 
-def char_feature_seq(word):
+def _char_feature_seq(word):
     '''
-    Converts word into sequence of character features of same length.
+    Converts word into sequence of character feature (represented as integers) of same length.
     
-    Requires: char_features()
+    Requires: _char_features()
     '''
     
     char_feat_seq = [None]*len(word)
-    for i, c in enumerate(word): char_feat_seq[i] = char_features(c)
+    for i, c in enumerate(word): char_feat_seq[i] = _char_features(c)
     return char_feat_seq
 
-def word_feature_seq(sent):
+def _word_feature_seq(sent):
     '''
-    Converts sentence into sequence of word features of same length.
+    Converts sentence into sequence of word features (represented as integers) of same length.
     
-    Requires: word_features()
+    Requires: _word_features()
     '''
     word_feat_seq = [None]*len(sent)
-    for i, w in enumerate(sent): word_feat_seq[i] = word_features(w)
+    for i, w in enumerate(sent): word_feat_seq[i] = _word_features(w)
     return word_feat_seq
 
 
-##### character tensor slices #######
+##########################################
+##### character-level tensor slices #######
+###########################################
 
-
-def char_matrix(sentence, char2idx, max_len_word, max_len_sent, word_padding, word_truncating, sent_padding):
+def _char_matrix(sentence, char2idx, max_len_word, max_len_sent, word_padding, word_truncating, sent_padding):
     '''
     Create a matrix of dimension (max_len_sent, max_len_word). Each row is a sequence of character indices representing
     that word. 
     
-    Requires: word2seq(), pad_sequences() from keras.preprocessing.sequence
+    Requires: _word2seq(), pad_sequences() from keras.preprocessing.sequence
     
     Inputs
     ------
@@ -196,7 +197,7 @@ def char_matrix(sentence, char2idx, max_len_word, max_len_sent, word_padding, wo
         array of dimension (max_len_sent, max_len_word)
     '''
     
-    X = pad_sequences([word2seq(w, char2idx) for w in sentence], 
+    X = pad_sequences([_word2seq(w, char2idx) for w in sentence], 
                        maxlen = max_len_word, 
                        padding = word_padding,
                        truncating = word_truncating)
@@ -229,12 +230,12 @@ def char_matrix(sentence, char2idx, max_len_word, max_len_sent, word_padding, wo
         
 
 
-def char_feature_matrix(sentence, max_len_word, max_len_sent, word_padding, word_truncating, sent_padding):
+def _char_feature_matrix(sentence, max_len_word, max_len_sent, word_padding, word_truncating, sent_padding):
     '''
     Create a matrix of dimension (max_len_sent, max_len_word). Each row is a sequence of feature indices the length
     of that word. 
     
-    Requires: char_feature_seq(), pad_sequences() from keras.preprocessing.sequence
+    Requires: _char_feature_seq(), pad_sequences() from keras.preprocessing.sequence
     
     Inputs
     ------
@@ -253,7 +254,7 @@ def char_feature_matrix(sentence, max_len_word, max_len_sent, word_padding, word
     X: numpy array
         array of dimension (max_len_sent, max_len_word)
     '''
-    X = pad_sequences([char_feature_seq(w) for w in sentence], 
+    X = pad_sequences([_char_feature_seq(w) for w in sentence], 
                        maxlen = max_len_word, 
                        padding = word_padding,
                        truncating = word_truncating)
@@ -291,15 +292,22 @@ def char_feature_matrix(sentence, max_len_word, max_len_sent, word_padding, word
 # max_len_word
 # zero_tag
         
-################ feature transformer classes ####################### 
-
+####################################################################
+################ feature transformer class   ####################### 
+####################################################################
+        
 class featureTransformer:
+    '''
+    Main wrapper class for generating input and output tensors using the above functions. 
+    Stores word, character and tag dictionaries along with options used in the feature conversion functions.
+    '''
+    
     
     def __init__(self, word_list, tag_list, tag_pad_value, max_len_sent, max_len_word, sent_padding, sent_truncating, word_padding, word_truncating, zero_tag = None):
         
-        self.tag2idx = create_tag_dictionary(tag_list, zero_tag = zero_tag)
-        self.word2idx = create_word_dictionary(word_list)
-        self.char2idx = create_character_dictionary(word_list)
+        self.tag2idx = _create_tag_dictionary(tag_list, zero_tag = zero_tag)
+        self.word2idx = _create_word_dictionary(word_list)
+        self.char2idx = _create_character_dictionary(word_list)
         
         self.idx2tag = {v: k for k, v in self.tag2idx.items()}
         #self.idx2word = {v: k for k, v in self.word2idx.items()}
@@ -314,12 +322,17 @@ class featureTransformer:
         self.max_len_word = max_len_word
         
         self.tag_pad_value = tag_pad_value
-        self.tag2idx = create_tag_dictionary(tag_list, zero_tag = zero_tag)
+        self.tag2idx = _create_tag_dictionary(tag_list, zero_tag = zero_tag)
         
     def tagSequence(self, tags):
-        return tags2seq(tags, self.tag2idx)
+        ''' Wrapper for _tags2seq()'''
+        return _tags2seq(tags, self.tag2idx)
     
     def pad_tags(self, tag_sequences):
+        ''' 
+        Wrapper for padding tag sequence. Uses pad_sequences() from keras. 
+        Input must be list of lists containing integers.
+        '''
         return pad_sequences(tag_sequences, 
                              maxlen = self.max_len_sent, 
                              padding = self.sent_padding,
@@ -328,13 +341,16 @@ class featureTransformer:
     
     
     def wordSequence(self, sentence):
-        return sent2seq(sentence, self.word2idx)
+        ''' Wrapper for _sent2seq() '''
+        return _sent2seq(sentence, self.word2idx)
     
     def wordFeatures(self, sentence):
-        return word_feature_seq(sentence)
+        ''' Wrapper for _word_feature_seq()'''
+        return _word_feature_seq(sentence)
     
     def charSequence(self, sentence):
-        return char_matrix(sentence, 
+        ''' Wrapper for _char_matrix() '''
+        return _char_matrix(sentence, 
                            self.char2idx,
                            self.max_len_word, 
                            self.max_len_sent,
@@ -343,7 +359,8 @@ class featureTransformer:
                            self.sent_padding)
         
     def charFeatures(self, sentence):
-        return char_feature_matrix(sentence, 
+        ''' Wrapper for _char_feature_matrix() '''
+        return _char_feature_matrix(sentence, 
                            self.max_len_word, 
                            self.max_len_sent,
                            self.word_padding,
@@ -363,7 +380,24 @@ class featureTransformer:
         
         
     def makeTensors(self, data, sentences = True, characters = False, word_features = False, tags = False):
+        '''
+        Main accessor method for converting sequences of tokens into tensors. Is a wrapper for the other 
+        methods of the featureTransformer class. 
         
+        Inputs
+        ------
+        data: list of dict
+            List of dictionaries containing keys 'sentence' and 'tags', each containing a list of tokens to be converted.
+        sentences: bool
+            return sentence tensors
+        characters: bool
+            return character tensors
+        word_features: bool
+            return word feature tensors
+        tags: bool
+            return tag tensors (for training)
+        
+        '''
         N = len(data)
         
         X_sent, X_char, X_word_ft, Y = [None]*N, [None]*N, [None]*N, [None]*N
