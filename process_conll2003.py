@@ -21,8 +21,8 @@ def conll_to_df(path, start_index = None):
     doc = list()
     current_sentence = list()
     
-    if start_index is None: i = 1
-    else: i = start_index
+    if start_index is None: i = 0
+    else: i = start_index - 1
     
     for line in r:
         
@@ -39,4 +39,10 @@ def conll_to_df(path, start_index = None):
             current_sentence = list()
     
     return pd.DataFrame(doc, columns = ['Sentence #','Word','POS','Chunk','Tag'])
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
                                         

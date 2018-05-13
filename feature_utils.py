@@ -1,5 +1,6 @@
 import numpy as np
 from keras.preprocessing.sequence import pad_sequences
+from keras.utils import to_categorical
 
 
 ##################################################
@@ -292,13 +293,18 @@ def char_feature_matrix(sentence, max_len_word, max_len_sent, word_padding, word
         
 ################ feature transformer classes ####################### 
 
-class sentenceTransformer:
+class featureTransformer:
     
-    def __init__(self, word_list, max_len_sent, max_len_word, sent_padding, sent_truncating, word_padding, word_truncating):
+    def __init__(self, word_list, tag_list, tag_pad_value, max_len_sent, max_len_word, sent_padding, sent_truncating, word_padding, word_truncating, zero_tag = None):
         
-        
+        self.tag2idx = create_tag_dictionary(tag_list, zero_tag = zero_tag)
         self.word2idx = create_word_dictionary(word_list)
         self.char2idx = create_character_dictionary(word_list)
+        
+        self.idx2tag = {v: k for k, v in self.tag2idx.items()}
+        #self.idx2word = {v: k for k, v in self.word2idx.items()}
+        #self.idx2char = {v: k for k, v in self.char2idx.items()}
+        
         
         self.word_padding = word_padding
         self.word_truncating = word_truncating
@@ -307,6 +313,19 @@ class sentenceTransformer:
         self.max_len_sent = max_len_sent
         self.max_len_word = max_len_word
         
+        self.tag_pad_value = tag_pad_value
+        self.tag2idx = create_tag_dictionary(tag_list, zero_tag = zero_tag)
+        
+    def tagSequence(self, tags):
+        return tags2seq(tags, self.tag2idx)
+    
+    def pad_tags(self, tag_sequences):
+        return pad_sequences(tag_sequences, 
+                             maxlen = self.max_len_sent, 
+                             padding = self.sent_padding,
+                             truncating = self.sent_truncating,
+                             value = self.tag2idx[self.tag_pad_value])
+    
     
     def wordSequence(self, sentence):
         return sent2seq(sentence, self.word2idx)
@@ -341,28 +360,61 @@ class sentenceTransformer:
                              truncating = self.sent_truncating, 
                              maxlen = self.max_len_sent, 
                              value = 0)
-
-
-class tagTransformer:
-    
-    def __init__(self, tag_list, pad_value, max_len_sent, padding, truncating, zero_tag = None):
-        assert pad_value in tag_list
-        self.tag2idx = create_tag_dictionary(tag_list, zero_tag)
-        self.pad_value = pad_value
-        self.zero_tag = zero_tag
-        self.max_len_sent = max_len_sent
-        self.padding = padding
-        self.truncating = truncating
         
-    def tagSequence(self, tags):
-        return tags2seq(tags, self.tag2idx)
-       
-    def pad_tags(self, tag_sequences):
-        return pad_sequences(tag_sequences, 
-                             maxlen = self.max_len_sent, 
-                             padding = self.padding,
-                             truncating = self.truncating,
-                             value = self.tag2idx[self.pad_value])
+        
+    def makeTensors(self, data, sentences = True, characters = False, word_features = False, tags = False):
+        
+        N = len(data)
+        
+        X_sent, X_char, X_word_ft, Y = [None]*N, [None]*N, [None]*N, [None]*N
+        
+        for i, s in enumerate(data):
+                                
+            if sentences:
+                X_sent[i] = self.wordSequence(s['sentence'])
+            if characters:
+                X_char[i] = self.charSequence(s['sentence'])
+            if word_features:
+                X_word_ft[i] = self.wordFeatures(s['sentence'])
+            if tags:
+                Y[i] = self.tagSequence(s['tags'])
+                
+        
+        if sentences:
+            X_sent = self.pad_sentences(X_sent)
+        if characters:
+            X_char = np.dstack(X_char).reshape((N, self.max_len_sent, self.max_len_word))
+        if word_features:
+            X_word_ft = self.pad_sentences(X_word_ft)
+        if tags:
+            Y = self.pad_tags(Y)
+            Y = np.array([to_categorical(i, len(self.tag2idx)) for i in Y])
+            
+        return X_sent, X_char, X_word_ft, Y
+    
+    
+
+
+#class tagTransformer:
+#    
+#    def __init__(self, tag_list, pad_value, max_len_sent, padding, truncating, zero_tag = None):
+#        assert pad_value in tag_list
+#        self.tag2idx = create_tag_dictionary(tag_list, zero_tag)
+#        self.pad_value = pad_value
+#        self.zero_tag = zero_tag
+#        self.max_len_sent = max_len_sent
+#        self.padding = padding
+#        self.truncating = truncating
+#        
+#    def tagSequence(self, tags):
+#        return tags2seq(tags, self.tag2idx)
+#       
+#    def pad_tags(self, tag_sequences):
+#        return pad_sequences(tag_sequences, 
+#                             maxlen = self.max_len_sent, 
+#                             padding = self.padding,
+#                             truncating = self.truncating,
+#                             value = self.tag2idx[self.pad_value])
         
 
 
