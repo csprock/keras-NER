@@ -1,6 +1,5 @@
 import json
 import itertools
-import pandas as pd
 import numpy as np
 from feature_utils import featureTransformer
 
@@ -81,7 +80,7 @@ from sklearn.metrics import classification_report
 
 from keras.callbacks import EarlyStopping
 from models.blstm_cnn_word_features_model import blstm_cnn_wd_ft_ner
-from keras.optimizers import RMSprop
+from keras.optimizers import SGD
 
 model = blstm_cnn_wd_ft_ner(max_len_sent = MAX_LEN_SENT, max_len_word = MAX_LEN_WORD, num_tags = len(feat_transformer.tag2idx), 
                             word_embedding_dims = embedding_dim, 
@@ -89,10 +88,11 @@ model = blstm_cnn_wd_ft_ner(max_len_sent = MAX_LEN_SENT, max_len_word = MAX_LEN_
                             word_feature_embedding_dims = (6,4))
                             
 
+
 model.layers[7].set_weights([E])
 model.layers[7].trainable = False
 
-model.compile(optimizer = RMSprop(lr = 0.0108), loss = 'categorical_crossentropy', metrics = ['acc'])
+model.compile(optimizer = SGD(lr = 0.01), loss = 'categorical_crossentropy', metrics = ['acc'])
 
 early_stopping = EarlyStopping(monitor = 'val_acc', min_delta = 0.0001, patience = 9)
 
