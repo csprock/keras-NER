@@ -27,15 +27,14 @@ def conll_to_df(path, start_index = None):
     for line in r:
         
         sent_label = 'Sentence: {}'.format(i)
-        if len(line) > 1:
-            
-            if 'DOCSTART' not in line:
-                word, pos, chunk, tag = parse_line(line)
-                current_sentence.append([sent_label, word, pos, chunk, tag])
-                
+        
+        if line != '\n' and 'DOCSTART' not in line:
+            word, pos, chunk, tag = parse_line(line)
+            current_sentence.append([sent_label, word, pos, chunk, tag])
         else:
-            doc.extend(current_sentence)
-            i += 1
+            if len(current_sentence) > 0:
+                doc.extend(current_sentence)
+                i += 1
             current_sentence = list()
     
     return pd.DataFrame(doc, columns = ['Sentence #','Word','POS','Chunk','Tag'])
