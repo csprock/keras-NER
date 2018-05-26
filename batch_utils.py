@@ -118,8 +118,3 @@ def create_batch_indices(data, batch_size, shuffle = True):
                                       batch_size = batch_size, 
                                       shuffle = shuffle)
 
-
-
-        
-
-

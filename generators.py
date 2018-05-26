@@ -1,11 +1,11 @@
 import numpy as np
 import keras
-from batch_tools import create_batch_indices
+from batch_utils import create_batch_indices
 
 
 class DataGenerator(keras.utils.Sequence):
     
-    def __init__(self, batch_size, tensor_maker, data, shuffle, sentences, characters, word_features, tags):
+    def __init__(self, data, tensor_maker, batch_size, shuffle, sentences, characters, word_features, tags):
         
         # data type parameters to be passed to TensorMaker.makeTensors() method
         self.sentences = sentences
