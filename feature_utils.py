@@ -167,7 +167,7 @@ def _word_feature_seq(sent):
     return word_feat_seq
 
 
-##########################################
+###########################################
 ##### character-level tensor slices #######
 ###########################################
 
@@ -201,6 +201,7 @@ def _char_matrix(sentence, char2idx, max_len_word, max_len_sent, word_padding, w
                        maxlen = max_len_word, 
                        padding = word_padding,
                        truncating = word_truncating)
+    
     if matrix_padding:
         if X.shape[0] < max_len_sent:
             # padding matrix with excess dimensions
@@ -398,6 +399,7 @@ class TensorMaker:
         N = len(data)
         
         X_sent, X_char, X_word_ft, Y = [None]*N, [None]*N, [None]*N, [None]*N
+        X_outputs = dict()
         
         for i, s in enumerate(data):
                                 
@@ -412,165 +414,168 @@ class TensorMaker:
                 
         if sentences:
             X_sent = np.asarray(X_sent)
+            X_outputs['word_input'] = X_sent
         if characters:
             X_char = np.dstack(X_char).reshape((N, sent_len, self.max_len_word))
+            X_outputs['char_input'] = X_char
         if word_features:
             X_word_ft = np.asarray(X_word_ft)
+            X_outputs['word_feature_input'] = X_word_ft
         if tags:
             Y = np.asarray(Y)
             Y = np.array([to_categorical(i, len(self.tag2idx)) for i in Y])
             
-        return X_sent, X_char, X_word_ft, Y
+        if tags:
+            return X_outputs, Y
+        else:
+            return X_outputs
+
+        #return X_outputs, Y    
+        #return X_sent, X_char, X_word_ft, Y
 
 ####################################################################
 ################ feature transformer class   ####################### 
 ####################################################################
         
-class featureTransformer:
-    '''
-    Main wrapper class for generating input and output tensors using the above functions. 
-    Stores word, character and tag dictionaries along with options used in the feature conversion functions.
-    '''
-    
-    
-    def __init__(self, word_list, tag_list, tag_pad_value, max_len_sent, max_len_word, sent_padding, sent_truncating, word_padding, word_truncating, matrix_padding = True, zero_tag = None):
+#class featureTransformer:
+#    '''
+#    Main wrapper class for generating input and output tensors using the above functions. 
+#    Stores word, character and tag dictionaries along with options used in the feature conversion functions.
+#    '''
+#    
+#    
+#    def __init__(self, word_list, tag_list, tag_pad_value, max_len_sent, max_len_word, sent_padding, sent_truncating, word_padding, word_truncating, matrix_padding = True, zero_tag = None):
+#        
+#        self.tag2idx = _create_tag_dictionary(tag_list, zero_tag = zero_tag)
+#        self.word2idx = _create_word_dictionary(word_list)
+#        self.char2idx = _create_character_dictionary(word_list)
+#        
+#        self.idx2tag = {v: k for k, v in self.tag2idx.items()}
+#        #self.idx2word = {v: k for k, v in self.word2idx.items()}
+#        #self.idx2char = {v: k for k, v in self.char2idx.items()}
+#        
+#        self.matrix_padding = matrix_padding
+#        self.word_padding = word_padding
+#        self.word_truncating = word_truncating
+#        self.sent_padding = sent_padding
+#        self.sent_truncating = sent_truncating
+#        self.max_len_sent = max_len_sent
+#        self.max_len_word = max_len_word
+#        
+#        self.tag_pad_value = tag_pad_value
+#        self.tag2idx = _create_tag_dictionary(tag_list, zero_tag = zero_tag)
+#        
+#    def tagSequence(self, tags):
+#        ''' Wrapper for _tags2seq()'''
+#        return _tags2seq(tags, self.tag2idx)
+#    
+#    def pad_tags(self, tag_sequences):
+#        ''' 
+#        Wrapper for padding tag sequence. Uses pad_sequences() from keras. 
+#        Input must be list of lists containing integers.
+#        '''
+#        return pad_sequences(tag_sequences, 
+#                             maxlen = self.max_len_sent, 
+#                             padding = self.sent_padding,
+#                             truncating = self.sent_truncating,
+#                             value = self.tag2idx[self.tag_pad_value])
+#    
+#    
+#    def wordSequence(self, sentence):
+#        ''' Wrapper for _sent2seq() '''
+#        return _sent2seq(sentence, self.word2idx)
+#    
+#    def wordFeatures(self, sentence):
+#        ''' Wrapper for _word_feature_seq()'''
+#        return _word_feature_seq(sentence)
+#    
+#    def charSequence(self, sentence):
+#        ''' Wrapper for _char_matrix() '''
+#        return _char_matrix(sentence, 
+#                           self.char2idx,
+#                           self.max_len_word, 
+#                           self.max_len_sent,
+#                           self.word_padding,
+#                           self.word_truncating,
+#                           self.sent_padding,
+#                           self.matrix_padding)
+#        
+#    def charFeatures(self, sentence):
+#        ''' Wrapper for _char_feature_matrix() '''
+#        return _char_feature_matrix(sentence, 
+#                           self.max_len_word, 
+#                           self.max_len_sent,
+#                           self.word_padding,
+#                           self.word_truncating,
+#                           self.sent_padding,
+#                           self.matrix_padding)
+#        
+#        
+#    def pad_sentences(self, sentence_list):
+#        '''
+#        takes list of sentences after wordSequence() has been called
+#        '''
+#        return pad_sequences(sentence_list, 
+#                             padding = self.sent_padding, 
+#                             truncating = self.sent_truncating, 
+#                             maxlen = self.max_len_sent, 
+#                             value = 0)
+#        
+#    def convert2tags(self, sentence):
+#        '''
+#        Convert sequence of indices back to tags.
+#        '''
+#        return [self.idx2tag[t] for t in sentence]
+#        
+#    def makeTensors(self, data, sentences = True, characters = False, word_features = False, tags = False, lists = False):
+#        '''
+#        Main accessor method for converting sequences of tokens into tensors. Is a wrapper for the other 
+#        methods of the featureTransformer class. 
+#        
+#        Inputs
+#        ------
+#        data: list of dict
+#            List of dictionaries containing keys 'sentence' and 'tags', each containing a list of tokens to be converted.
+#        sentences: bool
+#            return sentence tensors
+#        characters: bool
+#            return character tensors
+#        word_features: bool
+#            return word feature tensors
+#        tags: bool
+#            return tag tensors (for training)
+#        
+#        '''
+#        N = len(data)
+#        
+#        X_sent, X_char, X_word_ft, Y = [None]*N, [None]*N, [None]*N, [None]*N
+#        
+#        for i, s in enumerate(data.items()):
+#                                
+#            if sentences:
+#                X_sent[i] = self.wordSequence(s[1]['sentence'])
+#            if characters:
+#                X_char[i] = self.charSequence(s[1]['sentence'])
+#            if word_features:
+#                X_word_ft[i] = self.wordFeatures(s[1]['sentence'])
+#            if tags:
+#                Y[i] = self.tagSequence(s[1]['tags'])
+#                
+#        if lists == False:
+#            if sentences:
+#                X_sent = self.pad_sentences(X_sent)
+#            if characters:
+#                X_char = np.dstack(X_char).reshape((N, self.max_len_sent, self.max_len_word))
+#            if word_features:
+#                X_word_ft = self.pad_sentences(X_word_ft)
+#            if tags:
+#                Y = self.pad_tags(Y)
+#                Y = np.array([to_categorical(i, len(self.tag2idx)) for i in Y])
+#                
+#            return X_sent, X_char, X_word_ft, Y
+#        else:
+#            return X_sent, X_char, X_word_ft, Y
         
-        self.tag2idx = _create_tag_dictionary(tag_list, zero_tag = zero_tag)
-        self.word2idx = _create_word_dictionary(word_list)
-        self.char2idx = _create_character_dictionary(word_list)
-        
-        self.idx2tag = {v: k for k, v in self.tag2idx.items()}
-        #self.idx2word = {v: k for k, v in self.word2idx.items()}
-        #self.idx2char = {v: k for k, v in self.char2idx.items()}
-        
-        self.matrix_padding = matrix_padding
-        self.word_padding = word_padding
-        self.word_truncating = word_truncating
-        self.sent_padding = sent_padding
-        self.sent_truncating = sent_truncating
-        self.max_len_sent = max_len_sent
-        self.max_len_word = max_len_word
-        
-        self.tag_pad_value = tag_pad_value
-        self.tag2idx = _create_tag_dictionary(tag_list, zero_tag = zero_tag)
-        
-    def tagSequence(self, tags):
-        ''' Wrapper for _tags2seq()'''
-        return _tags2seq(tags, self.tag2idx)
-    
-    def pad_tags(self, tag_sequences):
-        ''' 
-        Wrapper for padding tag sequence. Uses pad_sequences() from keras. 
-        Input must be list of lists containing integers.
-        '''
-        return pad_sequences(tag_sequences, 
-                             maxlen = self.max_len_sent, 
-                             padding = self.sent_padding,
-                             truncating = self.sent_truncating,
-                             value = self.tag2idx[self.tag_pad_value])
-    
-    
-    def wordSequence(self, sentence):
-        ''' Wrapper for _sent2seq() '''
-        return _sent2seq(sentence, self.word2idx)
-    
-    def wordFeatures(self, sentence):
-        ''' Wrapper for _word_feature_seq()'''
-        return _word_feature_seq(sentence)
-    
-    def charSequence(self, sentence):
-        ''' Wrapper for _char_matrix() '''
-        return _char_matrix(sentence, 
-                           self.char2idx,
-                           self.max_len_word, 
-                           self.max_len_sent,
-                           self.word_padding,
-                           self.word_truncating,
-                           self.sent_padding,
-                           self.matrix_padding)
-        
-    def charFeatures(self, sentence):
-        ''' Wrapper for _char_feature_matrix() '''
-        return _char_feature_matrix(sentence, 
-                           self.max_len_word, 
-                           self.max_len_sent,
-                           self.word_padding,
-                           self.word_truncating,
-                           self.sent_padding,
-                           self.matrix_padding)
-        
-        
-    def pad_sentences(self, sentence_list):
-        '''
-        takes list of sentences after wordSequence() has been called
-        '''
-        return pad_sequences(sentence_list, 
-                             padding = self.sent_padding, 
-                             truncating = self.sent_truncating, 
-                             maxlen = self.max_len_sent, 
-                             value = 0)
-        
-    def convert2tags(self, sentence):
-        '''
-        Convert sequence of indices back to tags.
-        '''
-        return [self.idx2tag[t] for t in sentence]
-        
-    def makeTensors(self, data, sentences = True, characters = False, word_features = False, tags = False, lists = False):
-        '''
-        Main accessor method for converting sequences of tokens into tensors. Is a wrapper for the other 
-        methods of the featureTransformer class. 
-        
-        Inputs
-        ------
-        data: list of dict
-            List of dictionaries containing keys 'sentence' and 'tags', each containing a list of tokens to be converted.
-        sentences: bool
-            return sentence tensors
-        characters: bool
-            return character tensors
-        word_features: bool
-            return word feature tensors
-        tags: bool
-            return tag tensors (for training)
-        
-        '''
-        N = len(data)
-        
-        X_sent, X_char, X_word_ft, Y = [None]*N, [None]*N, [None]*N, [None]*N
-        
-        for i, s in enumerate(data.items()):
-                                
-            if sentences:
-                X_sent[i] = self.wordSequence(s[1]['sentence'])
-            if characters:
-                X_char[i] = self.charSequence(s[1]['sentence'])
-            if word_features:
-                X_word_ft[i] = self.wordFeatures(s[1]['sentence'])
-            if tags:
-                Y[i] = self.tagSequence(s[1]['tags'])
-                
-        if lists == False:
-            if sentences:
-                X_sent = self.pad_sentences(X_sent)
-            if characters:
-                X_char = np.dstack(X_char).reshape((N, self.max_len_sent, self.max_len_word))
-            if word_features:
-                X_word_ft = self.pad_sentences(X_word_ft)
-            if tags:
-                Y = self.pad_tags(Y)
-                Y = np.array([to_categorical(i, len(self.tag2idx)) for i in Y])
-                
-            return X_sent, X_char, X_word_ft, Y
-        else:
-            return X_sent, X_char, X_word_ft, Y
-        
-        
-        
-
-    
-    
-
 
 #class tagTransformer:
 #    
