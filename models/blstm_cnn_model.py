@@ -2,7 +2,6 @@ from keras.layers import Dense, Embedding, LSTM, TimeDistributed, Conv1D, MaxPoo
 from keras.layers import Bidirectional, concatenate
 from keras.models import Model
 
-
 def blstm_cnn_ner(max_len_sent, max_len_word, num_tags, word_embedding_dims, char_embedding_dims):
     
     ##### character-level CNN ######
