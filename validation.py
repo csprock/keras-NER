@@ -1,4 +1,4 @@
-#
+
 #A = 'xxxxxxxxxbixxxxbxb'
 #B = 'xxbxxxxxxbixxxxxxb'
 #
@@ -148,3 +148,43 @@ def sentence_metrics(predicted, actual):
     return tp, cp
     
         
+def sentence_metrics_stripped(predicted, actual):
+    '''
+    Return number of true positives (tp) and actual positives(cp) in between
+    a predicted and target sentence.
+    
+    Inputs list of word labels of equal length
+    '''
+    
+    assert len(predicted) == len(actual)
+    
+    cp, tp = 0, 0
+    n = len(predicted)
+    start_ne = list()
+    for i, s in enumerate(actual):
+        if s[0] == 'B':
+            cp += 1
+            start_ne.append(i)
+    
+    
+    for start_i in start_ne:
+        
+        i = start_i
+        while i < n and actual[i] in ['B','I']:
+            
+            if actual[i] == predicted[i]:
+                found = True  
+            else:
+                found = False
+            i += 1
+            
+            
+        if found and i < n:   # if predicted entity is longer than actual entity
+            if actual[i] == predicted[i]:
+                tp += 1
+        elif found:
+            tp += 1
+        else:
+            pass
+        
+    return tp, cp
