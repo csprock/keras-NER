@@ -7,8 +7,8 @@ def indices_by_length(data):
     
     Input
     -----
-    data:
-        list of data dictionaries with a key called 'length'
+    data: {int:{length:int, sentence:[], tags:[]}}
+        a dictionary of dictionaries, each keyed to an integer with with a key called 'length'
     
     Returns
     -------
@@ -99,6 +99,7 @@ def create_same_length_batches(length_sorted_indices, batch_size, shuffle = Fals
         new_batch = batch_dict(idx, batch_size = batch_size, start_index = accum)
         batches.update(new_batch)
         
+        # update accumulator which becomes the next start_index in the next iteration
         accum += len(new_batch)
     
     # shuffles the order of batches
