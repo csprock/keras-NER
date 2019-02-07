@@ -3,10 +3,10 @@ from keras.layers import LSTM, Embedding, Dense, TimeDistributed, Dropout, Bidir
 
 def blstm_ner(max_len_sent, embedding_dims, num_tags):
     
-    X_in = Input(shape = (max_len_sent,))
+    X_in = Input(shape = (None,), name='word_input')
     X = Embedding(input_dim = embedding_dims[0], 
                    output_dim = embedding_dims[1], 
-                   input_length = max_len_sent, 
+                   input_length = None,
                    mask_zero = False, 
                    name = 'embedding_layer')(X_in)
     

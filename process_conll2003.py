@@ -38,10 +38,3 @@ def conll_to_df(path, start_index = None):
             current_sentence = list()
     
     return pd.DataFrame(doc, columns = ['Sentence #','Word','POS','Chunk','Tag'])
-                                        
-                                        
-                                        
-                                        
-                                        
-                                        
-                                        
