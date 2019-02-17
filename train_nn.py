@@ -110,24 +110,62 @@ model.layers[WORD_EMBEDDING_LAYER].trainable = False
 ########## model training  ########
 ###################################
 print("Begin training...")
+BATCH_SIZE = 64
 
-from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
+
+from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard, Callback
 from keras.optimizers import RMSprop
 from generators import DataGenerator
 
-BATCH_SIZE = 64
+
+from validation import sentence_metrics
+from generators import TestDataGenerator
+
+TG = TestDataGenerator(test['data'], BATCH_SIZE, TM, True, False, False, True)
+
+class CustomMetrics(Callback):
+
+    def __init__(self, validation_generator, tensor_maker):
+        self.validation_generator = validation_generator
+        self.tensor_maker = tensor_maker
+
+
+
+    def on_epoch_end(self, batch, logs={}):
+
+        pp, cp, tp = 0, 0, 0
+        for b in self.validation_generator:
+
+            X_data, Y_test = b
+            Y_pred = self.model.predict_on_batch(X_data)
+            Y_pred, Y_test = np.argmax(Y_pred, axis=2), np.argmax(Y_test, axis=2)
+
+            for i in range(Y_pred.shape[0]):
+                r_tp, r_cp = sentence_metrics(self.tensor_maker.convert2tags(Y_pred[i, :]), self.tensor_maker.convert2tags(Y_test[i, :]))
+                _, r_pp = sentence_metrics(self.tensor_maker.convert2tags(Y_test[i, :]), self.tensor_maker.convert2tags(Y_pred[i, :]))
+                cp += r_cp
+                tp += r_tp
+                pp += r_pp
+
+        recall = (tp / cp)
+        precision = (tp / pp)
+
+        f1 = 2 / ((1 / precision) + (1 / recall))
+        print("Precision: %s, Recall: %s, F1: %s" % (precision, recall, f1))
+
+custom_metrics = CustomMetrics(TG, TM)
 
 model.compile(optimizer=RMSprop(lr=0.005), loss='categorical_crossentropy', metrics=['acc'])
 
-early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.0001, patience=9)
+early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.001, patience=9)
 
 checkpointer = ModelCheckpoint(filepath='./models/model_{}'.format(1), verbose=True, save_best_only=True)
 
-tb = TensorBoard(log_dir='./tf_logs/{}'.format(time.time()),
-                 batch_size=BATCH_SIZE,
-                 write_grads=True,
-                 write_graph=True,
-                 histogram_freq=1)
+# tb = TensorBoard(log_dir='./tf_logs/{}'.format(time.time()),
+#                  batch_size=BATCH_SIZE,
+#                  write_grads=True,
+#                  write_graph=True,
+#                  histogram_freq=1)
 
 DG = DataGenerator(data=train['data'], batch_size=BATCH_SIZE, tensor_maker=TM, shuffle=True, sentences=True, characters=False, word_features=False, tags=True)
 VG = DataGenerator(data=valid['data'], batch_size=BATCH_SIZE, tensor_maker=TM, shuffle=True, sentences=True, characters=False, word_features=False, tags=True)
@@ -137,7 +175,7 @@ model.fit_generator(generator=DG,
                     validation_steps=len(VG),
                     steps_per_epoch=len(DG),
                     epochs=75,
-                    callbacks=[early_stopping, checkpointer, tb],
+                    callbacks=[early_stopping, checkpointer, custom_metrics],
                     shuffle=True)
 
 
